@@ -1,0 +1,139 @@
+"use client";
+
+import { useState } from "react";
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from "@/components/ui/tooltip";
+import { Send, Zap, Coffee, Terminal, Sparkles, Heart, CalendarPlus, ShieldAlert, ChevronRight } from "lucide-react";
+import type { Metrics, WorldState } from "@/app/simulation/types";
+
+interface InterventionPanelProps {
+  status: string;
+  onIntervene: (type: string, customMsg?: string) => void;
+  metrics?: Metrics;
+  worldState?: WorldState | null;
+}
+
+export function InterventionPanel({ status, onIntervene, metrics, worldState }: InterventionPanelProps) {
+  const [customIntervention, setCustomIntervention] = useState("");
+
+  const handleCustomIntervention = () => {
+    if (!customIntervention.trim()) return;
+    onIntervene("custom", customIntervention);
+    setCustomIntervention("");
+  };
+
+  const suggestions = [];
+
+  if (metrics && metrics.avgStress > 70) {
+    suggestions.push({
+      id: "bantuan",
+      label: "Bantuan Darurat",
+      icon: Heart,
+      color: "text-rose-500",
+      tooltip: "-15 Tekanan, sedikit penurunan anggaran"
+    });
+  } else {
+     suggestions.push({
+      id: "musyawarah",
+      label: "Musyawarah Tambahan",
+      icon: Coffee,
+      color: "text-orange-400",
+      tooltip: "+10 Kepuasan, -5 Tekanan"
+    });
+  }
+
+  if (metrics && metrics.avgMorale < 40) {
+    suggestions.push({
+      id: "subsidi",
+      label: "Subsidi Darurat",
+      icon: Zap,
+      color: "text-amber-500",
+      tooltip: "+20 Kepuasan, berdampak besar ke Anggaran"
+    });
+  }
+
+  if (worldState && worldState.deadlineWeeksLeft <= 2) {
+    suggestions.push({
+      id: "perpanjang",
+      label: "Perpanjang Musyawarah",
+      icon: CalendarPlus,
+      color: "text-blue-500",
+      tooltip: "Kurangi Tekanan, tapi turunkan Reputasi"
+    });
+  }
+
+  return (
+    <div className="absolute bottom-0 left-0 right-0 p-4 bg-linear-to-t from-background via-background/90 to-transparent z-20">
+      <div className="max-w-4xl mx-auto space-y-2">
+        
+        {/* Dynamic Context Suggestions */}
+        {suggestions.length > 0 && status !== "completed" && (
+           <div className="flex justify-center gap-2 mb-2">
+             {suggestions.map(s => {
+               const Icon = s.icon;
+               return (
+                  <TooltipProvider key={s.id}>
+                    <Tooltip>
+                      <TooltipTrigger>
+                        <span
+                          role="button"
+                          tabIndex={0}
+                          className="inline-flex items-center justify-center h-8 px-3 rounded-md text-[10px] uppercase tracking-wider font-semibold border border-primary/20 bg-card hover:bg-primary/10 shadow-sm transition-all cursor-pointer select-none"
+                          onClick={() => onIntervene(s.id)}
+                          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onIntervene(s.id); }}
+                        >
+                          <Icon className={`w-3 h-3 mr-1.5 ${s.color}`} />
+                          {s.label}
+                        </span>
+                      </TooltipTrigger>
+                      <TooltipContent>{s.tooltip}</TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+               );
+             })}
+           </div>
+        )}
+
+        <Card className="shadow-2xl border-primary/30 bg-card/90 backdrop-blur-xl ring-1 ring-primary/10 overflow-hidden group focus-within:ring-primary/50 transition-all">
+          <CardContent className="p-0">
+            <div className="flex items-center">
+              <div className="flex items-center gap-2 pl-4 pr-3 py-3 border-r border-border/50 bg-secondary/30 shrink-0">
+                <Terminal className="w-4 h-4 text-primary" />
+                <Badge variant="secondary" className="bg-primary/20 text-primary hover:bg-primary/20 text-[10px] uppercase tracking-widest font-bold">
+                  Modus Kades
+                </Badge>
+              </div>
+
+              <div className="flex-1 relative flex items-center bg-black/5 dark:bg-black/20">
+                <ChevronRight className="w-4 h-4 text-primary/50 ml-3 shrink-0" />
+                <Input
+                  placeholder="Ketik kebijakan darurat... (misal: 'Batalkan pemotongan BLT', 'Tambah subsidi pupuk')"
+                  className="bg-transparent border-0 focus-visible:ring-0 shadow-none font-mono text-[13px] placeholder:text-muted-foreground/60 h-12 rounded-none px-3 text-primary"
+                  value={customIntervention}
+                  onChange={(e) => setCustomIntervention(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") handleCustomIntervention();
+                  }}
+                  disabled={status === "completed"}
+                />
+                
+                <Button
+                  size="icon"
+                  className="h-9 w-9 my-1.5 mr-2 bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg shadow-md transition-transform active:scale-95"
+                  onClick={handleCustomIntervention}
+                  disabled={status === "completed" || !customIntervention.trim()}
+                >
+                  <Send className="w-4 h-4 ml-0.5" />
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
+}
+
