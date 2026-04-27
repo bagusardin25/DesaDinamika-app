@@ -102,6 +102,8 @@ export function useDummySimulation(soundEnabled: boolean) {
   const [status, setStatus] = useState("running");
   const [isTyping, setIsTyping] = useState(true);
   const [typingAgent, setTypingAgent] = useState<string | null>(null);
+  const [companyName, setCompanyName] = useState("Desa Sukamakmur");
+  const [agentMap, setAgentMap] = useState<Record<string, string>>({});
   const [worldState, setWorldState] = useState<WorldState>(WORLD_STATES[0]);
   const [decisionStatus, setDecisionStatus] = useState<DecisionStatus | null>(null);
   const [metricsHistory, setMetricsHistory] = useState<MetricsSnapshot[]>([]);
@@ -126,6 +128,35 @@ export function useDummySimulation(soundEnabled: boolean) {
 
   // Auto-play messages
   useEffect(() => {
+    let currentAgentMap: Record<string, string> = {};
+    const savedAgentsStr = sessionStorage.getItem("demo_agents");
+    if (savedAgentsStr) {
+      try {
+        const savedAgents = JSON.parse(savedAgentsStr);
+        if (savedAgents && savedAgents.length > 0) {
+          const mappedAgents = savedAgents.map((sa: any) => ({
+            id: sa.id,
+            name: `${sa.name} (${sa.role})`,
+            morale: 70 + Math.floor(Math.random() * 10),
+            stress: 20 + Math.floor(Math.random() * 10),
+            loyalty: 70 + Math.floor(Math.random() * 10),
+            productivity: 75 + Math.floor(Math.random() * 10),
+            initials: sa.name.substring(0, 2).toUpperCase(),
+          }));
+          setAgents(mappedAgents);
+          
+          DUMMY_AGENTS.forEach((da, i) => {
+            currentAgentMap[da.name] = mappedAgents[i] ? mappedAgents[i].name : mappedAgents[Math.floor(Math.random() * mappedAgents.length)].name;
+          });
+          setAgentMap(currentAgentMap);
+        }
+      } catch (e) {
+        console.error("Failed to parse demo agents", e);
+      }
+    }
+    const savedCompany = sessionStorage.getItem("demo_company");
+    if (savedCompany) setCompanyName(savedCompany);
+
     function playNext() {
       if (scriptIdx.current >= SCRIPT.length) {
         // Simulation complete
@@ -147,10 +178,11 @@ export function useDummySimulation(soundEnabled: boolean) {
       }
 
       const msg = SCRIPT[scriptIdx.current];
+      const mappedAgentName = msg.type === "agent" ? (currentAgentMap[msg.agent_name] || msg.agent_name) : msg.agent_name;
 
       // Show typing indicator first
       setIsTyping(true);
-      setTypingAgent(msg.type === "system" ? null : msg.agent_name);
+      setTypingAgent(msg.type === "system" ? null : mappedAgentName);
 
       const typingDelay = msg.type === "system" ? 800 : 1500 + Math.random() * 1500;
 
@@ -158,8 +190,8 @@ export function useDummySimulation(soundEnabled: boolean) {
         const simMsg: SimMessage = {
           id: scriptIdx.current + 1,
           round: msg.round,
-          agent_name: msg.agent_name,
-          agent: msg.agent_name,
+          agent_name: mappedAgentName,
+          agent: mappedAgentName,
           type: msg.type,
           content: msg.content,
           thought: msg.thought,
@@ -177,7 +209,7 @@ export function useDummySimulation(soundEnabled: boolean) {
 
         // Apply agent state changes
         if (msg.state_changes && msg.type === "agent") {
-          applyChanges(msg.agent_name, msg.state_changes);
+          applyChanges(mappedAgentName, msg.state_changes);
         }
 
         // Update decision status
@@ -241,7 +273,7 @@ export function useDummySimulation(soundEnabled: boolean) {
     currentRound,
     totalRounds,
     status,
-    companyName: "Desa Sukamakmur",
+    companyName,
     isConnected: true,
     isTyping,
     typingAgent,

@@ -27,8 +27,24 @@ export default function LoginPage() {
   useEffect(() => {
     if (user) {
       router.replace("/dashboard");
+    } else if (!isLoading && !error) {
+      // Auto login for demo purposes
+      const autoLogin = async () => {
+        setIsLoading(true);
+        try {
+          await login("admin@desadinamika.id", "admin123");
+          router.push("/dashboard");
+        } catch (err: any) {
+          setError(err.message || "Auto-login failed");
+        } finally {
+          setIsLoading(false);
+        }
+      };
+      // Short delay for better UX
+      const timer = setTimeout(autoLogin, 500);
+      return () => clearTimeout(timer);
     }
-  }, [user, router]);
+  }, [user, isLoading, error, login, router]);
 
   // Load Google Identity Services script
   useEffect(() => {

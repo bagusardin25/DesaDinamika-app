@@ -567,7 +567,9 @@ function ReportContent() {
     }
 
     // Try dummy data first for known dummy sim IDs
-    const dummyReport = getDummyReport(simId);
+    // If it's a demo, use sim-001 as the base report before session overrides
+    const baseId = simId === "demo" ? "sim-001" : simId;
+    const dummyReport = getDummyReport(baseId);
 
     fetch(`${API_BASE}/api/simulation/${simId}/report`)
       .then((res) => {
@@ -581,6 +583,28 @@ function ReportContent() {
       .catch(() => {
         // Fallback to dummy data if backend is unavailable
         if (dummyReport) {
+          // Override with sessionStorage data if available for consistency
+          try {
+            const demoCompany = sessionStorage.getItem("demo_company");
+            const demoCrisis = sessionStorage.getItem("demo_crisis");
+            const demoAgentsStr = sessionStorage.getItem("demo_agents");
+            
+            if (demoCompany) dummyReport.company_name = demoCompany;
+            if (demoCrisis) dummyReport.crisis_name = demoCrisis;
+            if (demoAgentsStr) {
+              const demoAgents = JSON.parse(demoAgentsStr);
+              if (demoAgents && demoAgents.length > 0) {
+                // Keep the original report length or map as needed
+                const newAgentReports = dummyReport.agent_reports.map((ar, i) => {
+                  const sa = demoAgents[i] || demoAgents[Math.floor(Math.random() * demoAgents.length)];
+                  return { ...ar, name: sa.name, role: sa.role };
+                });
+                dummyReport.agent_reports = newAgentReports;
+              }
+            }
+          } catch (e) {
+            console.error("Failed to parse sessionStorage data for report", e);
+          }
           setReport(dummyReport);
           setLoading(false);
         } else {

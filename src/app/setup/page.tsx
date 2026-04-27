@@ -383,6 +383,13 @@ export default function SetupPage() {
       console.error("Failed to start simulation:", err);
       // Fallback to demo mode when backend is unavailable
       toast.info("Backend tidak tersedia. Menjalankan simulasi demo...");
+      
+      // Save setup data to use in dummy simulation & report
+      sessionStorage.setItem("demo_agents", JSON.stringify(selectedAgents));
+      sessionStorage.setItem("demo_company", companyName);
+      sessionStorage.setItem("demo_culture", companyCulture);
+      sessionStorage.setItem("demo_crisis", crisis === "custom" ? customCrisis : crisis);
+      
       router.push("/simulation?id=demo");
     }
   };
